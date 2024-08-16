@@ -19,7 +19,7 @@ export const precision = {
     return BigInt(Math.pow(10, decimal)) * BigInt(value)
   },
 
-  toTokenDecimal(value: bigint) {
+  decimal(value: bigint) {
     return div(value.toString(), Math.pow(10, Decimals.TOKEN))
   },
 }

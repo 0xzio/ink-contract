@@ -4,7 +4,7 @@ import { precision } from '@utils/precision'
 export const options: DeployFunctionOptions = {
   contractName: 'Ink',
   dependencyNames: [],
-  getDeployArgs({ dependencyContracts, namedAccounts }) {
+  getDeployArgs({ namedAccounts }) {
     return [namedAccounts.deployer]
   },
 }

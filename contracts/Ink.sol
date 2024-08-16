@@ -16,15 +16,20 @@ contract Ink is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
 
   constructor(address initialOwner) ERC20("Ink token", "INK") ERC20Permit("Ink token") Ownable(initialOwner) {}
 
+  receive() external payable {}
+
   function getTokenAmount(uint256 ethAmount) public view returns (uint256) {
     return y - k / (x + ethAmount);
   }
 
   function mint() public payable nonReentrant {
     uint256 ethAmount = msg.value;
+    require(ethAmount > 0, "ETH amount must be greater than zero");
+
     uint256 tokenAmount = getTokenAmount(ethAmount);
     require(tokenAmount + totalSupply() < MAX_SUPPLY, "Should not exceed total supply");
     _mint(msg.sender, tokenAmount);
+
     x = x + ethAmount;
     y = y - tokenAmount;
     k = x * y;

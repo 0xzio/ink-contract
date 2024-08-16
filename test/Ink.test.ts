@@ -1,9 +1,12 @@
+import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers'
 import { Fixture, deployFixture } from '@utils/deployFixture'
 import { precision } from '@utils/precision'
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
 
-describe.only('Ink', function () {
+const GAS_PRICE = 800000000n
+
+describe('Ink', function () {
   let f: Fixture
 
   const k = precision.token(precision.token(32190005730))
@@ -20,24 +23,62 @@ describe.only('Ink', function () {
   })
 
   it('mint() ', async () => {
-    const ethBalance0 = await ethers.provider.getBalance(f.deployer.address)
+    const oneEth = precision.token(1)
+    const deployerEthBalance0 = await ethers.provider.getBalance(f.deployer.address)
+    const user1EthBalance0 = await ethers.provider.getBalance(f.user1.address)
+    const tokenAmount0 = await f.ink.getTokenAmount(oneEth)
 
-    const tx1 = await f.ink.connect(f.user1).mint({ value: precision.token(1) })
-    await tx1.wait()
+    expect(tokenAmount0).to.equal(await calTokenAmount(f, oneEth))
 
-    const supply = await f.ink.totalSupply()
-    console.log('====supply:', supply, precision.toTokenDecimal(supply))
+    /**
+     *  mint again
+     */
+    const { gasEth: gasEth1 } = await mint(f, f.user1, oneEth)
 
-    const ethBalance1 = await ethers.provider.getBalance(f.deployer.address)
-    console.log('====ethBalance1:', ethBalance1 - ethBalance0, precision.toTokenDecimal(ethBalance1 - ethBalance0))
+    const supply1 = await f.ink.totalSupply()
+    expect(supply1).to.be.equal(tokenAmount0)
 
-    expect(ethBalance1 - ethBalance0).to.be.equal(precision.token(1))
+    const user1EthBalance1 = await ethers.provider.getBalance(f.user1.address)
+    expect(user1EthBalance0 - user1EthBalance1).to.be.equal(oneEth + gasEth1)
 
-    const tx2 = await f.ink.connect(f.user1).mint({ value: precision.token(2) })
-    await tx2.wait()
+    const deployerEthBalance1 = await ethers.provider.getBalance(f.deployer.address)
 
-    const ethBalance2 = await ethers.provider.getBalance(f.deployer.address)
+    expect(deployerEthBalance1 - deployerEthBalance0).to.be.equal(precision.token(1))
 
-    expect(ethBalance2 - ethBalance1).to.be.equal(precision.token(2))
+    /**
+     *  mint again
+     */
+    const tokenAmount1 = await f.ink.getTokenAmount(oneEth)
+
+    expect(tokenAmount1).to.equal(await calTokenAmount(f, oneEth))
+
+    const { gasEth: gasEth2 } = await mint(f, f.user1, oneEth)
+
+    const deployerEthBalance2 = await ethers.provider.getBalance(f.deployer.address)
+
+    expect(deployerEthBalance2 - deployerEthBalance1).to.be.equal(oneEth)
+
+    const user1EthBalance2 = await ethers.provider.getBalance(f.user1.address)
+    expect(user1EthBalance1 - user1EthBalance2).to.be.equal(oneEth + gasEth2)
+
+    const supply2 = await f.ink.totalSupply()
+    expect(supply2).to.be.equal(tokenAmount0 + tokenAmount1)
   })
 })
+
+async function calTokenAmount(f: Fixture, ethAmount: bigint) {
+  const [x, y, k] = await Promise.all([f.ink.x(), f.ink.y(), f.ink.k()])
+  expect(x * y).to.equal(k)
+  const newX = x + ethAmount
+  const newY = k / newX
+  return y - newY
+}
+
+async function mint(f: Fixture, account: HardhatEthersSigner, ethAmount: bigint) {
+  const tx = await f.ink.connect(account).mint({ value: ethAmount, gasPrice: GAS_PRICE })
+
+  const receipt: any = await tx.wait()
+  const gasUsed = receipt.gasUsed as bigint
+  const gasEth = gasUsed * GAS_PRICE
+  return { gasUsed, gasEth }
+}
