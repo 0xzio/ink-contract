@@ -37,10 +37,6 @@ const config: HardhatUserConfig = {
     localhost: {
       saveDeployments: false,
     },
-    sepolia: {
-      url: 'https://eth-sepolia.g.alchemy.com/v2/3NOJzJclAc6EPYa2uW4rBchMV5o6eAI0',
-      blockGasLimit: 100000000,
-    },
     arb_sepolia: {
       url: `https://arb-sepolia.g.alchemy.com/v2/${process.env.SEPOLIA_API_KEY}`,
       accounts: [process.env.ACCOUNT_PRIVATE_KEY!],
@@ -51,7 +47,7 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: '0.8.20',
+        version: '0.8.24',
         settings: {
           viaIR: false,
           optimizer: {
